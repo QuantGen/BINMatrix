@@ -35,6 +35,7 @@ class BINMatrix {
         unsigned long long int length;
         std::fstream fs;
         unsigned long long int reduce_indexes(unsigned int, unsigned int);
+        bool check_bounds(unsigned long long int index);
 };
 
 template <typename T>
@@ -50,8 +51,8 @@ BINMatrix<T>::BINMatrix(std::string path, unsigned int n_, unsigned int p_) : n(
 
 template <typename T>
 T BINMatrix<T>::read(unsigned long long int index) {
-    index *= sizeof(T);
-    fs.seekg(index);
+    check_bounds(index);
+    fs.seekg(index * sizeof(T));
     T buffer;
     fs.read(reinterpret_cast<char*>(&buffer), sizeof(T));
     return buffer;
@@ -64,8 +65,8 @@ T BINMatrix<T>::read(unsigned int i, unsigned int j) {
 
 template <typename T>
 void BINMatrix<T>::write(unsigned long long index, T value) {
-    index *= sizeof(T);
-    fs.seekp(index);
+    check_bounds(index);
+    fs.seekp(index * sizeof(T));
     fs.write(reinterpret_cast<char*>(&value), sizeof(T));
     fs.flush();
 };
@@ -81,6 +82,13 @@ unsigned long long int BINMatrix<T>::reduce_indexes(unsigned int i, unsigned int
     --i; --j;
     // Convert two-dimensional to one-dimensional index
     return ((i * n) + j);
+};
+
+template <typename T>
+bool BINMatrix<T>::check_bounds(unsigned long long int index) {
+    if (index >= n * p) {
+        throw std::out_of_range("index is out of range");
+    }
 };
 
 RCPP_MODULE(mod_BINMatrix) {
