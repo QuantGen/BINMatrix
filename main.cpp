@@ -5,7 +5,7 @@ bool file_exists(std::string& path) {
     return file.good();
 }
 
-void allocate_file(std::string& path, unsigned int size = 0) {
+void allocate_file(std::string& path, unsigned long long int size = 0) {
     std::ofstream file(path);
     if (size > 0) {
         file.seekp(size - 1);
@@ -13,7 +13,7 @@ void allocate_file(std::string& path, unsigned int size = 0) {
     }
 }
 
-bool check_length(std::fstream& fs, unsigned int length) {
+bool check_length(std::fstream& fs, unsigned long long int length) {
     fs.seekg(0, fs.end);
     bool length_matches = fs.tellg() == length;
     fs.seekg(0, fs.beg);
@@ -24,14 +24,16 @@ template <typename T>
 class BINMatrix {
     public:
         BINMatrix(std::string, unsigned int, unsigned int);
+        T read(unsigned long long int);
         T read(unsigned int, unsigned int);
+        void write(unsigned long long int, T);
         void write(unsigned int, unsigned int, T);
     private:
         unsigned int n;
         unsigned int p;
-        unsigned int length;
+        unsigned long long int length;
         std::fstream fs;
-        unsigned int reduce_indexes(unsigned int, unsigned int);
+        unsigned long long int reduce_indexes(unsigned int, unsigned int);
 };
 
 template <typename T>
@@ -46,8 +48,8 @@ BINMatrix<T>::BINMatrix(std::string path, unsigned int n_, unsigned int p_) : n(
 };
 
 template <typename T>
-T BINMatrix<T>::read(unsigned int i, unsigned int j) {
-    unsigned int index(reduce_indexes(i, j));
+T BINMatrix<T>::read(unsigned long long int index) {
+    index *= sizeof(T);
     fs.seekg(index);
     T buffer;
     fs.read(reinterpret_cast<char*>(&buffer), sizeof(T));
@@ -55,19 +57,29 @@ T BINMatrix<T>::read(unsigned int i, unsigned int j) {
 };
 
 template <typename T>
-void BINMatrix<T>::write(unsigned int i, unsigned int j, T value) {
-    unsigned int index(reduce_indexes(i, j));
+T BINMatrix<T>::read(unsigned int i, unsigned int j) {
+    return read(reduce_indexes(i, j));
+};
+
+template <typename T>
+void BINMatrix<T>::write(unsigned long long index, T value) {
+    index *= sizeof(T);
     fs.seekp(index);
     fs.write(reinterpret_cast<char*>(&value), sizeof(T));
     fs.flush();
 };
 
 template <typename T>
-unsigned int BINMatrix<T>::reduce_indexes(unsigned int i, unsigned int j) {
+void BINMatrix<T>::write(unsigned int i, unsigned int j, T value) {
+    write(reduce_indexes(i, j), value);
+};
+
+template <typename T>
+unsigned long long int BINMatrix<T>::reduce_indexes(unsigned int i, unsigned int j) {
     // Convert to zero-based index
     --i; --j;
     // Convert two-dimensional to one-dimensional index
-    return ((i * n) + j) * sizeof(T);
+    return ((i * n) + j);
 };
 
 int main() {
