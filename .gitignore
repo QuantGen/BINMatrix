@@ -1,1 +1,3 @@
-build/
+.Rproj.user
+.Rhistory
+.RData

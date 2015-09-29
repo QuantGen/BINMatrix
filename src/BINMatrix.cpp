@@ -1,4 +1,5 @@
 #include <fstream>
+#include <Rcpp.h>
 
 bool file_exists(std::string& path) {
     std::ifstream file(path);
@@ -82,45 +83,44 @@ unsigned long long int BINMatrix<T>::reduce_indexes(unsigned int i, unsigned int
     return ((i * n) + j);
 };
 
-int main() {
+RCPP_MODULE(mod_BINMatrix) {
 
-    try {
+    using namespace Rcpp ;
 
-        // char
-        //BINMatrix<char> m_char("test", 6, 6);
-        //m_char.write(1, 1, 'a');
-        //m_char.write(1, 6, 'b');
-        //m_char.write(2, 1, 'c');
-        //m_char.write(6, 6, 'z');
-        //std::cout << m_char.read(1, 1) << std::endl;
-        //std::cout << m_char.read(1, 6) << std::endl;
-        //std::cout << m_char.read(2, 1) << std::endl;
-        //std::cout << m_char.read(6, 6) << std::endl;
+    int (BINMatrix<int>::*read_int_1)(unsigned long long int) = &BINMatrix<int>::read;
+    int (BINMatrix<int>::*read_int_2)(unsigned int, unsigned int) = &BINMatrix<int>::read;
+    void (BINMatrix<int>::*write_int_1)(unsigned long long int, int) = &BINMatrix<int>::write;
+    void (BINMatrix<int>::*write_int_2)(unsigned int, unsigned int, int) = &BINMatrix<int>::write;
+    class_<BINMatrix<int>>("BINMatrixInt")
+    .constructor<std::string, unsigned int, unsigned int>()
+    .method("read", read_int_1)
+    .method("read", read_int_2)
+    .method("write", write_int_1)
+    .method("write", write_int_2)
+    ;
 
-        // int
-        //BINMatrix<int> m_int("test", 6, 6);
-        //m_int.write(1, 1, 1);
-        //m_int.write(1, 6, 2);
-        //m_int.write(2, 1, 3);
-        //m_int.write(6, 6, 99);
-        //std::cout << m_int.read(1, 1) << std::endl;
-        //std::cout << m_int.read(1, 6) << std::endl;
-        //std::cout << m_int.read(2, 1) << std::endl;
-        //std::cout << m_int.read(6, 6) << std::endl;
+    double (BINMatrix<double>::*read_double_1)(unsigned long long int) = &BINMatrix<double>::read;
+    double (BINMatrix<double>::*read_double_2)(unsigned int, unsigned int) = &BINMatrix<double>::read;
+    void (BINMatrix<double>::*write_double_1)(unsigned long long int, double) = &BINMatrix<double>::write;
+    void (BINMatrix<double>::*write_double_2)(unsigned int, unsigned int, double) = &BINMatrix<double>::write;
+    class_<BINMatrix<double>>("BINMatrixDouble")
+    .constructor<std::string, unsigned int, unsigned int>()
+    .method("read", read_double_1)
+    .method("read", read_double_2)
+    .method("write", write_double_1)
+    .method("write", write_double_2)
+    ;
 
-        //double
-        BINMatrix<double> m_double("test", 6, 6);
-        m_double.write(1, 1, 1.1);
-        m_double.write(1, 6, 2.2);
-        m_double.write(2, 1, 3.3);
-        m_double.write(6, 6, 99.99);
-        std::cout << m_double.read(1, 1) << std::endl;
-        std::cout << m_double.read(1, 6) << std::endl;
-        std::cout << m_double.read(2, 1) << std::endl;
-        std::cout << m_double.read(6, 6) << std::endl;
-
-    } catch (std::length_error& ex) {
-        std::cerr << ex.what() << std::endl;
-    }
+    char (BINMatrix<char>::*read_char_1)(unsigned long long int) = &BINMatrix<char>::read;
+    char (BINMatrix<char>::*read_char_2)(unsigned int, unsigned int) = &BINMatrix<char>::read;
+    void (BINMatrix<char>::*write_char_1)(unsigned long long int, char) = &BINMatrix<char>::write;
+    void (BINMatrix<char>::*write_char_2)(unsigned int, unsigned int, char) = &BINMatrix<char>::write;
+    class_<BINMatrix<char>>("BINMatrixChar")
+    .constructor<std::string, unsigned int, unsigned int>()
+    .method("read", read_char_1)
+    .method("read", read_char_2)
+    .method("write", write_char_1)
+    .method("write", write_char_2)
+    ;
 
 }

@@ -1,0 +1,10 @@
+Package: BINMatrix
+Title: BINMatrix
+Version: 0.0.0.9000
+Authors@R: person("Alexander", "Grueneberg", email = "alexander.grueneberg@googlemail.com", role = c("aut", "cre"))
+Description: BINMatrix
+License: MIT + file LICENSE
+LazyData: true
+Imports: methods, Rcpp (>= 0.12.1)
+LinkingTo: Rcpp
+SystemRequirements: C++11

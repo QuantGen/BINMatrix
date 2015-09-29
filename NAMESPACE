@@ -1,0 +1,3 @@
+useDynLib(BINMatrix)
+import(methods, Rcpp)
+exportPattern("BINMatrix")
