@@ -29,6 +29,8 @@ class BINMatrix {
         T read(unsigned int, unsigned int);
         void write(unsigned long long int, T);
         void write(unsigned int, unsigned int, T);
+        unsigned int get_n();
+        unsigned int get_p();
     private:
         unsigned int n;
         unsigned int p;
@@ -77,6 +79,16 @@ void BINMatrix<T>::write(unsigned int i, unsigned int j, T value) {
 };
 
 template <typename T>
+unsigned int BINMatrix<T>::get_n() {
+    return n;
+};
+
+template <typename T>
+unsigned int BINMatrix<T>::get_p() {
+    return p;
+};
+
+template <typename T>
 unsigned long long int BINMatrix<T>::reduce_indexes(unsigned int i, unsigned int j) {
     // Convert to zero-based index
     --i; --j;
@@ -105,6 +117,8 @@ RCPP_MODULE(mod_BINMatrix) {
     .method("read", read_int_2)
     .method("write", write_int_1)
     .method("write", write_int_2)
+    .property("n", &BINMatrix<int>::get_n)
+    .property("p", &BINMatrix<int>::get_p)
     ;
 
     double (BINMatrix<double>::*read_double_1)(unsigned long long int) = &BINMatrix<double>::read;
@@ -117,6 +131,8 @@ RCPP_MODULE(mod_BINMatrix) {
     .method("read", read_double_2)
     .method("write", write_double_1)
     .method("write", write_double_2)
+    .property("n", &BINMatrix<double>::get_n)
+    .property("p", &BINMatrix<double>::get_p)
     ;
 
     char (BINMatrix<char>::*read_char_1)(unsigned long long int) = &BINMatrix<char>::read;
@@ -129,6 +145,8 @@ RCPP_MODULE(mod_BINMatrix) {
     .method("read", read_char_2)
     .method("write", write_char_1)
     .method("write", write_char_2)
+    .property("n", &BINMatrix<char>::get_n)
+    .property("p", &BINMatrix<char>::get_p)
     ;
 
 }
