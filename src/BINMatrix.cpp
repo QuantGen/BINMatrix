@@ -25,10 +25,9 @@ template <typename T, typename M, typename V>
 class BINMatrix {
     public:
         BINMatrix(std::string, unsigned int, unsigned int);
-        V read(Rcpp::IntegerVector i);
-        M read(Rcpp::IntegerVector i, Rcpp::IntegerVector j);
-        void write(unsigned long long int, T);
-        void write(unsigned int, unsigned int, T);
+        V read(Rcpp::IntegerVector);
+        M read(Rcpp::IntegerVector, Rcpp::IntegerVector);
+        void write(Rcpp::IntegerVector, Rcpp::IntegerVector, M);
         unsigned int get_n();
         unsigned int get_p();
     private:
@@ -37,8 +36,10 @@ class BINMatrix {
         unsigned long long int length;
         std::fstream fs;
         T read(unsigned long long int);
+        void write(unsigned long long int, T);
         unsigned long long int reduce_indexes(unsigned int, unsigned int);
-        bool check_bounds(unsigned long long int index);
+        bool check_bounds(Rcpp::IntegerVector&);
+        bool check_bounds(Rcpp::IntegerVector&, Rcpp::IntegerVector&);
 };
 
 template <typename T, typename M, typename V>
@@ -54,18 +55,13 @@ BINMatrix<T, M, V>::BINMatrix(std::string path, unsigned int n_, unsigned int p_
 
 template <typename T, typename M, typename V>
 V BINMatrix<T, M, V>::read(Rcpp::IntegerVector i) {
-    // Check if index is out of bounds.
-    if (Rcpp::is_true(Rcpp::any(i > n * p))) {
-        Rcpp::stop("Invalid dimensions.");
-    }
+    check_bounds(i);
     // Convert to zero-based index.
     i = i - 1;
-    // Keep size of i.
-    unsigned int size_i = i.size();
     // Reserve output vector.
-    V out (size_i);
+    V out (i.size());
     // Iterate over indexes.
-    for (unsigned int idx_i = 0; idx_i < size_i; ++idx_i) {
+    for (unsigned int idx_i = 0; idx_i < i.size(); ++idx_i) {
         out(idx_i) = read(i[idx_i]);
     }
     return out;
@@ -73,22 +69,15 @@ V BINMatrix<T, M, V>::read(Rcpp::IntegerVector i) {
 
 template <typename T, typename M, typename V>
 M BINMatrix<T, M, V>::read(Rcpp::IntegerVector i, Rcpp::IntegerVector j) {
-    // Check if indexes are out of bounds.
-    if (Rcpp::is_true(Rcpp::any(i > n)) || Rcpp::is_true(Rcpp::any(j > p))) {
-        Rcpp::stop("Invalid dimensions.");
-    }
+    check_bounds(i, j);
     // Convert to zero-based index.
-    i = i - 1;
-    j = j - 1;
-    // Keep sizes of i and j.
-    unsigned int size_i = i.size();
-    unsigned int size_j = j.size();
+    i = i - 1; j = j - 1;
     // Reserve output matrix.
-    M out (size_i, size_j);
+    M out (i.size(), j.size());
     // Iterate over row indexes.
-    for (unsigned int idx_i = 0; idx_i < size_i; ++idx_i) {
+    for (unsigned int idx_i = 0; idx_i < i.size(); ++idx_i) {
         // Iterate over column indexes.
-        for (unsigned int idx_j = 0; idx_j < size_j; ++idx_j) {
+        for (unsigned int idx_j = 0; idx_j < j.size(); ++idx_j) {
             out(idx_i, idx_j) = read(reduce_indexes(i[idx_i], j[idx_j]));
         }
     }
@@ -96,20 +85,18 @@ M BINMatrix<T, M, V>::read(Rcpp::IntegerVector i, Rcpp::IntegerVector j) {
 }
 
 template <typename T, typename M, typename V>
-void BINMatrix<T, M, V>::write(unsigned long long index, T value) {
-    check_bounds(index);
-    fs.seekp(index * sizeof(T));
-    fs.write(reinterpret_cast<char*>(&value), sizeof(T));
-    fs.flush();
-};
-
-template <typename T, typename M, typename V>
-void BINMatrix<T, M, V>::write(unsigned int i, unsigned int j, T value) {
+void BINMatrix<T, M, V>::write(Rcpp::IntegerVector i, Rcpp::IntegerVector j, M value) {
+    check_bounds(i, j);
     // Convert to zero-based index.
-    --i;
-    --j;
-    write(reduce_indexes(i, j), value);
-};
+    i = i - 1; j = j - 1;
+    // Iterate over row indexes.
+    for (unsigned int idx_i = 0; idx_i < i.size(); ++idx_i) {
+        // Iterate over column indexes.
+        for (unsigned int idx_j = 0; idx_j < j.size(); ++idx_j) {
+            write(reduce_indexes(i[idx_i], j[idx_j]), value(idx_i, idx_j));
+        }
+    }
+}
 
 template <typename T, typename M, typename V>
 unsigned int BINMatrix<T, M, V>::get_n() {
@@ -130,14 +117,28 @@ T BINMatrix<T, M, V>::read(unsigned long long int index) {
 }
 
 template <typename T, typename M, typename V>
+void BINMatrix<T, M, V>::write(unsigned long long index, T value) {
+    fs.seekp(index * sizeof(T));
+    fs.write(reinterpret_cast<char*>(&value), sizeof(T));
+    fs.flush();
+}
+
+template <typename T, typename M, typename V>
 unsigned long long int BINMatrix<T, M, V>::reduce_indexes(unsigned int i, unsigned int j) {
     return ((i * n) + j);
 }
 
 template <typename T, typename M, typename V>
-bool BINMatrix<T, M, V>::check_bounds(unsigned long long int index) {
-    if (index >= n * p) {
-        throw std::out_of_range("index is out of range");
+bool BINMatrix<T, M, V>::check_bounds(Rcpp::IntegerVector& i) {
+    if (Rcpp::is_true(Rcpp::any(i > n * p))) {
+        Rcpp::stop("Invalid dimensions.");
+    }
+}
+
+template <typename T, typename M, typename V>
+bool BINMatrix<T, M, V>::check_bounds(Rcpp::IntegerVector& i, Rcpp::IntegerVector& j) {
+    if (Rcpp::is_true(Rcpp::any(i > n)) || Rcpp::is_true(Rcpp::any(j > p))) {
+        Rcpp::stop("Invalid dimensions.");
     }
 }
 
@@ -147,44 +148,26 @@ RCPP_MODULE(mod_BINMatrix) {
 
     Rcpp::IntegerVector (BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::*read_int_vector)(Rcpp::IntegerVector) = &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::read;
     Rcpp::IntegerMatrix (BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::*read_int_matrix)(Rcpp::IntegerVector, Rcpp::IntegerVector) = &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::read;
-    void (BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::*write_int_1)(unsigned long long int, int) = &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::write;
-    void (BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::*write_int_2)(unsigned int, unsigned int, int) = &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::write;
+    void (BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::*write_int)(Rcpp::IntegerVector, Rcpp::IntegerVector, Rcpp::IntegerMatrix) = &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::write;
     class_<BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>>("BINMatrixInt")
     .constructor<std::string, unsigned int, unsigned int>()
     .method("read", read_int_vector)
     .method("read", read_int_matrix)
-    .method("write", write_int_1)
-    .method("write", write_int_2)
+    .method("write", write_int)
     .property("n", &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::get_n)
     .property("p", &BINMatrix<int, Rcpp::IntegerMatrix, Rcpp::IntegerVector>::get_p)
     ;
 
     Rcpp::NumericVector (BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::*read_double_vector)(Rcpp::IntegerVector) = &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::read;
     Rcpp::NumericMatrix (BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::*read_double_matrix)(Rcpp::IntegerVector, Rcpp::IntegerVector) = &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::read;
-    void (BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::*write_double_1)(unsigned long long int, double) = &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::write;
-    void (BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::*write_double_2)(unsigned int, unsigned int, double) = &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::write;
+    void (BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::*write_double)(Rcpp::IntegerVector, Rcpp::IntegerVector, Rcpp::NumericMatrix) = &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::write;
     class_<BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>>("BINMatrixDouble")
     .constructor<std::string, unsigned int, unsigned int>()
     .method("read", read_double_vector)
     .method("read", read_double_matrix)
-    .method("write", write_double_1)
-    .method("write", write_double_2)
+    .method("write", write_double)
     .property("n", &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::get_n)
     .property("p", &BINMatrix<double, Rcpp::NumericMatrix, Rcpp::NumericVector>::get_p)
-    ;
-
-    Rcpp::CharacterVector (BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::*read_char_vector)(Rcpp::IntegerVector) = &BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::read;
-    Rcpp::CharacterMatrix (BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::*read_char_matrix)(Rcpp::IntegerVector, Rcpp::IntegerVector) = &BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::read;
-    void (BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::*write_char_1)(unsigned long long int, char) = &BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::write;
-    void (BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::*write_char_2)(unsigned int, unsigned int, char) = &BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::write;
-    class_<BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>>("BINMatrixChar")
-    .constructor<std::string, unsigned int, unsigned int>()
-    .method("read", read_char_vector)
-    .method("read", read_char_matrix)
-    .method("write", write_char_1)
-    .method("write", write_char_2)
-    .property("n", &BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::get_n)
-    .property("p", &BINMatrix<char, Rcpp::CharacterMatrix, Rcpp::CharacterVector>::get_p)
     ;
 
 }

@@ -6,8 +6,7 @@ BINMatrix <- function(path, n, p, type) {
     switch(
         type,
         int = new(BINMatrixInt, path, n, p),
-        double = new(BINMatrixDouble, path, n, p),
-        char = new(BINMatrixChar, path, n, p)
+        double = new(BINMatrixDouble, path, n, p)
     )
 }
 
@@ -70,14 +69,27 @@ BINMatrix <- function(path, n, p, type) {
     return(subset)
 }
 
+`.[<-` <- function(x, i, j, ..., value) {
+    if (missing(i)) {
+        i <- 1:nrow(x)
+    }
+    if (missing(j)) {
+        j <- 1:ncol(x)
+    }
+    m <- matrix(nrow = length(i), ncol = length(j), data = value)
+    x$write(i, j, m)
+    return(x)
+}
+
 evalqOnLoad({
 
     assign(paste0("dim.", BINMatrixInt), .dim, package.env)
     assign(paste0("dim.", BINMatrixDouble), .dim, package.env)
-    assign(paste0("dim.", BINMatrixChar), .dim, package.env)
 
     setMethod('[', signature(x = BINMatrixInt), `.[`)
     setMethod('[', signature(x = BINMatrixDouble), `.[`)
-    setMethod('[', signature(x = BINMatrixChar), `.[`)
+
+    setReplaceMethod('[', signature(x = BINMatrixInt), `.[<-`)
+    setReplaceMethod('[', signature(x = BINMatrixDouble), `.[<-`)
 
 })
