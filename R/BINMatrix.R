@@ -6,7 +6,8 @@ BINMatrix <- function(path, n, p, type) {
     switch(
         type,
         int = new(BINMatrixInt, path, n, p),
-        double = new(BINMatrixDouble, path, n, p)
+        double = new(BINMatrixDouble, path, n, p),
+        stop("Type not supported.")
     )
 }
 
